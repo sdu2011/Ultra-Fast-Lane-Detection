@@ -113,3 +113,22 @@ year = {2020}
 
 # Thanks
 Thanks zchrissirhcz for the contribution to the compile tool of CULane, KopiSoftware for contributing to the speed test, and ustclbh for testing on the Windows platform.
+
+-----
+# 笔记
+类似于anchor based目标检测方法. 预先选择特定个行,每一行有参考点,类似anchor box.
+
+一张图,假设最多有C条车道线,anchor line有h行.每行划分出w+1(多出来的1用来表示有没有检出车道线)个grid.  模型输出shape为[w+1,h,C].
+以backbone:resnet50为例:模型输入图像尺寸288*800,backbone处理后完成32倍下采样,得到2048x9x25的特征.
+然后用1x1卷积去整合channel维度的特征,得到8x9x25的特征.展平为1800(=8x9x25)个特征.在此基础上做两次线性变换
+``` python
+        self.cls = torch.nn.Sequential(
+            torch.nn.Linear(1800, 2048),
+            torch.nn.ReLU(),
+            torch.nn.Linear(2048, self.total_dim),
+        )
+```
+这里的total_dim为预先定义好的,其值为num_gridding x num_cls_per_lane x num_of_lanes. 以[37,10,4]为例, num_cls_per_lane=10,代表只在这10行寻找车道点. 其值为num_gridding=36+1. 前36个值会去做softmax转成概率,表示哪一个grid存在车道线点的可能最大.  num_of_lanes=4表示最多有4条车道线.
+
+以out[a,b,c]为例,其含义为第b行的第a个grid为第c条车道线点的概率.
+

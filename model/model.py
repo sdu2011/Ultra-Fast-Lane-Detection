@@ -1,6 +1,7 @@
 import torch
 from model.backbone import resnet
 import numpy as np
+from utils.tool_func import get_linenumber
 
 class conv_bn_relu(torch.nn.Module):
     def __init__(self,in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1,bias=False):
@@ -85,9 +86,19 @@ class parsingNet(torch.nn.Module):
         else:
             aux_seg = None
 
-        fea = self.pool(fea).view(-1, 1800)
+        print('line:{},fea shape={}'.format(get_linenumber(),fea.shape)) #resnet50:32 downsample 2048channel [1,2048,9,25]
+        fea = self.pool(fea)
+        print('line:{},fea shape={}'.format(get_linenumber(),fea.shape)) #[1,8,9,25]
+
+        fea = fea.view(-1, 1800) # how 1800 comes? 1800=8*9*25
+        print('line:{},fea shape={}'.format(get_linenumber(),fea.shape))
+        
+        # group_cls = self.cls(fea)
+        # print('line:{},group_cls shape={}'.format(get_linenumber(),group_cls.shape))
 
         group_cls = self.cls(fea).view(-1, *self.cls_dim)
+
+        print('line:{},group_cls shape={}'.format(get_linenumber(),group_cls.shape))
 
         if self.use_aux:
             return group_cls, aux_seg

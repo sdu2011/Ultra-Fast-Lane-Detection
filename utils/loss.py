@@ -30,11 +30,11 @@ class SoftmaxFocalLoss(nn.Module):
         self.nll = nn.NLLLoss(ignore_index=ignore_lb)
 
     def forward(self, logits, labels):
-        scores = F.softmax(logits, dim=1)
-        factor = torch.pow(1.-scores, self.gamma)
-        log_score = F.log_softmax(logits, dim=1)
-        log_score = factor * log_score
-        loss = self.nll(log_score, labels)
+        scores = F.softmax(logits, dim=1) #转成概率
+        factor = torch.pow(1.-scores, self.gamma)　#求每个概率的权重w=-p的gamma次方
+        log_score = F.log_softmax(logits, dim=1)　#求log(p)
+        log_score = factor * log_score　#每个元素都变成w*log(p)
+        loss = self.nll(log_score, labels) #取labels标识的log_score求平均
         return loss
 
 class ParsingRelationLoss(nn.Module):
@@ -44,7 +44,7 @@ class ParsingRelationLoss(nn.Module):
         n,c,h,w = logits.shape
         loss_all = []
         for i in range(0,h-1):
-            loss_all.append(logits[:,:,i,:] - logits[:,:,i+1,:])
+            loss_all.append(logits[:,:,i,:] - logits[:,:,i+1,:])　#一阶差分　保证平滑
         #loss0 : n,c,w
         loss = torch.cat(loss_all)
         return torch.nn.functional.smooth_l1_loss(loss,torch.zeros_like(loss))
@@ -64,11 +64,11 @@ class ParsingRelationDis(nn.Module):
 
         diff_list1 = []
         for i in range(0,num_rows // 2):
-            diff_list1.append(pos[:,i,:] - pos[:,i+1,:])
+            diff_list1.append(pos[:,i,:] - pos[:,i+1,:])　　#
 
         loss = 0
         for i in range(len(diff_list1)-1):
-            loss += self.l1(diff_list1[i],diff_list1[i+1])
+            loss += self.l1(diff_list1[i],diff_list1[i+1]) #二阶差分　保证是直线
         loss /= len(diff_list1) - 1
         return loss
 
