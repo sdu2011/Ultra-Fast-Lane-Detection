@@ -15,18 +15,63 @@ tusimple_row_anchor = [ 64,  68,  72,  76,  80,  84,  88,  92,  96, 100, 104, 10
             168, 172, 176, 180, 184, 188, 192, 196, 200, 204, 208, 212, 216,
             220, 224, 228, 232, 236, 240, 244, 248, 252, 256, 260, 264, 268,
             272, 276, 280, 284]
-row_anchor = culane_row_anchor
-# row_anchor = tusimple_row_anchor
 
 model_type='culane'
+# model_type='tusimple'
+
+def img_resize(img,width,height):
+    origin_w,origin_h = img.shape[1],img.shape[0]
+    origin_r = 1.0*origin_w/origin_h
+
+    empty_img=np.zeros([height,width,3],dtype=np.uint8)
+    dim = None
+    resized = None
+    r = 1.0*width/height
+    if origin_r < r:
+        #新的图片的h = height
+        r = height / float(origin_h)
+        dim = (int(origin_w * r), height)
+        print(dim)
+        resized = cv2.resize(img, dim)
+        print(resized.shape)
+        w_diff = int(width - int(origin_w * r))/2
+        w_start,w_end = int(w_diff),int(width - w_diff)
+        print(w_start,w_end)
+        empty_img[:,w_start:w_end,:] = resized
+    else:
+        r = width / float(origin_w)
+        dim = (width, int(origin_h * r))
+
+    return empty_img
+    
+def test_resize():
+    # empty_img = np.ndarray()
+
+    imPath= './download/lishui_tl.png'   
+    img = cv2.imread(imPath)
+    img_w,img_h = img.shape[1],img.shape[0]
+    print('line{},img_w={},img_h={}'.format(get_linenumber(),img_w,img_h))
+    img = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
+    # img = image_resize(img,height=288)
+    img = img_resize(img,width=800,height=288)
+    print(img.shape)
+
+    # cv2.imshow('resize',img)
+    # cv2.waitKey(0)
+
+    return img
 
 if __name__ == "__main__":
-
     net = parsingNet(backbone='18',cls_dim=(201, 18, 4))
     test_model = './download/culane_18.pth'
+    griding_num=200
+    row_anchor = culane_row_anchor
     if model_type == 'tusimple':
-        net = parsingNet(backbone='18',cls_dim=(100, 56, 4))
+        net = parsingNet(backbone='18',cls_dim=(101, 56, 4))
         test_model = './download/tusimple_18.pth'
+        griding_num=100
+        row_anchor = tusimple_row_anchor
+
 
     # input=torch.randn((1,3,288,800))
 
@@ -38,6 +83,7 @@ if __name__ == "__main__":
     print('line{},img_w={},img_h={}'.format(get_linenumber(),img_w,img_h))
     img = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
     img = cv2.resize(img,(800,288))
+    # img = img_resize(img,width=800,height=288)
     img = img / 255.
     img = (img - image_mean) / image_std
     
@@ -60,16 +106,6 @@ if __name__ == "__main__":
     out = net(input)
     print(out.shape) 
 
-    # out_j = out[0].data.cpu().numpy()  
-    # out_j = out_j[:, ::-1, :] #为啥在h这个维度要逆序?
-    # prob = scipy.special.softmax(out_j[:-1, :, :], axis=0) #在grid这一维度上做softmax
-    # idx = np.arange(cfg.griding_num) + 1
-    # idx = idx.reshape(-1, 1, 1)
-    # loc = np.sum(prob * idx, axis=0) #这里为什么要做点乘?
-    # out_j = np.argmax(out_j, axis=0) #在grid这一维度上求argmax
-    # loc[out_j == cfg.griding_num] = 0
-    # out_j = loc
-
     out_j = out[0].data.cpu().numpy() #[grid+1,anchor_lane_number,max_lane_num]
     out_j = out_j[:, ::-1, :] #h这个维度倒序?
     # print(''out_j.shape)
@@ -77,7 +113,7 @@ if __name__ == "__main__":
     print('prob shape={}'.format(prob.shape))
     print(prob[5,7,1]) #第7个参考行的第五个grid是第1条车道线的概率
 
-    griding_num=200
+    
     idx = np.arange(griding_num) + 1
     # print('idx shape={}'.format(idx.shape))
     # print('idx={}'.format(idx))
