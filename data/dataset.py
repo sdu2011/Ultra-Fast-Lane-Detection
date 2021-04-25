@@ -51,6 +51,7 @@ class LaneClsDataset(torch.utils.data.Dataset):
 
         with open(list_path, 'r') as f:
             self.list = f.readlines()
+            # print('self.list={}'.format(self.list))
 
         self.row_anchor = row_anchor
         self.row_anchor.sort()
@@ -59,6 +60,7 @@ class LaneClsDataset(torch.utils.data.Dataset):
         l = self.list[index]
         l_info = l.split()
         img_name, label_name = l_info[0], l_info[1]
+        # print('img_name={},label_name={}'.format(img_name,label_name))
         if img_name[0] == '/':
             img_name = img_name[1:]
             label_name = label_name[1:]
@@ -69,13 +71,11 @@ class LaneClsDataset(torch.utils.data.Dataset):
         img_path = os.path.join(self.path, img_name)
         img = loader_func(img_path)
     
-
         if self.simu_transform is not None:
             img, label = self.simu_transform(img, label)
-        lane_pts = self._get_index(label)
+        lane_pts = self._get_index(label)  
+        # print('lane_pts={}'.format(lane_pts))
         # get the coordinates of lanes at row anchors
-
-
 
         w, h = img.size
         cls_label = self._grid_pts(lane_pts, self.griding_num, w)
@@ -111,23 +111,33 @@ class LaneClsDataset(torch.utils.data.Dataset):
 
     def _get_index(self, label):
         w, h = label.size
+        print('label size={}'.format(label.size))
 
+        #这里为何要这么做? self.row_anchor不是已经区分culane还是tusimple了吗 800*288是culane的数据集的图片大小 1280*720是tusimple数据集大小
+        #答:因为constant.py中定义的tusimple_row_anchor是以h为288作为参考来定义的.
         if h != 288:
             scale_f = lambda x : int((x * 1.0/288) * h)
             sample_tmp = list(map(scale_f,self.row_anchor))
 
-        all_idx = np.zeros((self.num_lanes,len(sample_tmp),2))
+        #第三个维度存的数据的含义1:原图中的参考行的行数r 2.第r行对应的第x条车道线像素的均值
+        #举个具体例子,有10个参考行,其中第5个参考行为原图中的第50行,有两条车道线,lane1的像素在本行的列数为30,31,32,lane2的像素在本行的列数为70,71,72的话,
+        #则all_idx[0,5,:]=50,31   all_idx[1,5,:]=50,71
+        all_idx = np.zeros((self.num_lanes,len(sample_tmp),2))  # 
+        print('all_idx shape={}'.format(all_idx.shape))
+        print('sample_tmp={}'.format(sample_tmp))
         for i,r in enumerate(sample_tmp):
-            label_r = np.asarray(label)[int(round(r))]
+            print('i={},r={}'.format(i,r))
+            label_r = np.asarray(label)[int(round(r))]  # np.asarray(label): 720x1280 ndarray
+            # print('label_r shape={}'.format(label_r.shape))
             for lane_idx in range(1, self.num_lanes + 1):
-                pos = np.where(label_r == lane_idx)[0]
-                if len(pos) == 0:
+                pos = np.where(label_r == lane_idx)[0] #np.where
+                if len(pos) == 0: #说明第r行没有车道线lane_idx
                     all_idx[lane_idx - 1, i, 0] = r
-                    all_idx[lane_idx - 1, i, 1] = -1
+                    all_idx[lane_idx - 1, i, 1] = -1 
                     continue
-                pos = np.mean(pos)
-                all_idx[lane_idx - 1, i, 0] = r
-                all_idx[lane_idx - 1, i, 1] = pos
+                pos = np.mean(pos)  #第r行,第lane_idx条车道线的平均列位置.
+                all_idx[lane_idx - 1, i, 0] = r  # 是哪一个参考行
+                all_idx[lane_idx - 1, i, 1] = pos # 第lane_idx-1个车道线 第r行车道线的平均列位置.
 
         # data augmentation: extend the lane to the boundary of image
 

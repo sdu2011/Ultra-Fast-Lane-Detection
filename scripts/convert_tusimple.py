@@ -29,11 +29,12 @@ def draw(im,line,idx,show = False):
     pt0 = (int(line_x[0]),int(line_y[0]))
     if show:
         cv2.putText(im,str(idx),(int(line_x[len(line_x) // 2]),int(line_y[len(line_x) // 2]) - 20),cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255), lineType=cv2.LINE_AA)
-        idx = idx * 60
+        idx = idx * 60 #下面cv2.line使用,像素亮度调到60倍
         
-    
     for i in range(len(line_x)-1):
-        cv2.line(im,pt0,(int(line_x[i+1]),int(line_y[i+1])),(idx,),thickness = 16)
+        print(idx)
+        cv2.line(im,pt0,(int(line_x[i+1]),int(line_y[i+1])),(idx,),thickness = 16) #绘制的时候为啥亮度值搞这么低?
+        # cv2.line(im,pt0,(int(line_x[i+1]),int(line_y[i+1])),(255,0,0),thickness = 16)        
         pt0 = (int(line_x[i+1]),int(line_y[i+1]))
 def get_tusimple_list(root, label_list):
     '''
