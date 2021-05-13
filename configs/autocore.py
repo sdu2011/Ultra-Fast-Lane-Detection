@@ -1,9 +1,10 @@
 # DATA
-dataset='Tusimple'
-data_root = '/home/train/hdd/sc/data/lane/tusimple'
+# dataset='Tusimple'
+dataset='Autocore'
+data_root = '/home/train/hdd/sc/data/lane/autocore'
 
 # TRAIN
-epoch = 100
+epoch = 500
 batch_size = 16
 optimizer = 'Adam'    #['SGD','Adam']
 # learning_rate = 0.1
@@ -20,7 +21,7 @@ warmup_iters = 100
 # NETWORK
 backbone = '18'
 griding_num = 100
-use_aux = True
+use_aux = False
 
 # LOSS
 sim_loss_w = 1.0
@@ -39,4 +40,4 @@ resume = None
 test_model = None
 test_work_dir = None
 
-num_lanes = 4
+num_lanes = 2

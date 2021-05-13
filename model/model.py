@@ -64,11 +64,8 @@ class parsingNet(torch.nn.Module):
             torch.nn.Linear(2048, self.total_dim),
         )
 
+        # 1x1卷积用来降低backbone提取到的fea的channel数量.
         self.pool = torch.nn.Conv2d(512,8,1) if backbone in ['34','18'] else torch.nn.Conv2d(2048,8,1)
-        # 1/32,2048 channel
-        # 288,800 -> 9,40,2048
-        # (w+1) * sample_rows * 4
-        # 37 * 10 * 4
         initialize_weights(self.cls)
 
     def forward(self, x):
@@ -86,11 +83,11 @@ class parsingNet(torch.nn.Module):
         else:
             aux_seg = None
 
-        print('line:{},fea shape={}'.format(get_linenumber(),fea.shape)) #resnet50:32 downsample 2048channel [1,2048,9,25]
+        print('line:{},fea shape={}'.format(get_linenumber(),fea.shape)) 
         fea = self.pool(fea)
-        print('line:{},fea shape={}'.format(get_linenumber(),fea.shape)) #[1,8,9,25]
+        print('line:{},fea shape={}'.format(get_linenumber(),fea.shape)) 
 
-        fea = fea.view(-1, 1800) # how 1800 comes? 1800=8*9*25
+        fea = fea.view(-1,1800) # how 1800 comes? 1800=8*9*25
         print('line:{},fea shape={}'.format(get_linenumber(),fea.shape))
         
         # group_cls = self.cls(fea)
@@ -104,7 +101,6 @@ class parsingNet(torch.nn.Module):
             return group_cls, aux_seg
 
         return group_cls
-
 
 def initialize_weights(*models):
     for model in models:
@@ -129,3 +125,85 @@ def real_init_weights(m):
                 real_init_weights(mini_m)
         else:
             print('unkonwn module', m)
+
+
+class AutocoreNet(torch.nn.Module):
+    def __init__(self, size=(1440, 1080), pretrained=True, backbone='18', cls_dim=(37, 10, 4), use_aux=False):
+        super(AutocoreNet, self).__init__()
+
+        self.size = size
+        self.w = size[0]
+        self.h = size[1]
+        self.cls_dim = cls_dim # (num_gridding, num_cls_per_lane, num_of_lanes)
+        self.use_aux = use_aux
+        self.total_dim = np.prod(cls_dim)
+
+        print('backbone={}'.format(backbone))
+        self.model = resnet(backbone, pretrained=pretrained)
+
+        # if self.use_aux:
+        #     self.aux_header2 = torch.nn.Sequential(
+        #         conv_bn_relu(128, 128, kernel_size=3, stride=1, padding=1) if backbone in ['34','18'] else conv_bn_relu(512, 128, kernel_size=3, stride=1, padding=1),
+        #         conv_bn_relu(128,128,3,padding=1),
+        #         conv_bn_relu(128,128,3,padding=1),
+        #         conv_bn_relu(128,128,3,padding=1),
+        #     )
+        #     self.aux_header3 = torch.nn.Sequential(
+        #         conv_bn_relu(256, 128, kernel_size=3, stride=1, padding=1) if backbone in ['34','18'] else conv_bn_relu(1024, 128, kernel_size=3, stride=1, padding=1),
+        #         conv_bn_relu(128,128,3,padding=1),
+        #         conv_bn_relu(128,128,3,padding=1),
+        #     )
+        #     self.aux_header4 = torch.nn.Sequential(
+        #         conv_bn_relu(512, 128, kernel_size=3, stride=1, padding=1) if backbone in ['34','18'] else conv_bn_relu(2048, 128, kernel_size=3, stride=1, padding=1),
+        #         conv_bn_relu(128,128,3,padding=1),
+        #     )
+        #     self.aux_combine = torch.nn.Sequential(
+        #         conv_bn_relu(384, 256, 3,padding=2,dilation=2),
+        #         conv_bn_relu(256, 128, 3,padding=2,dilation=2),
+        #         conv_bn_relu(128, 128, 3,padding=2,dilation=2),
+        #         conv_bn_relu(128, 128, 3,padding=4,dilation=4),
+        #         torch.nn.Conv2d(128, cls_dim[-1] + 1,1)
+        #         # output : n, num_of_lanes+1, h, w
+        #     )
+        #     initialize_weights(self.aux_header2,self.aux_header3,self.aux_header4,self.aux_combine)
+
+        # 1x1卷积用来降低backbone提取到的fea的channel数量. renet18/resnet34提取到的fea的channel=512,resnet50提取到的fea的channel=2048
+        self.pool = torch.nn.Conv2d(512,8,1) if backbone in ['34','18'] else torch.nn.Conv2d(2048,8,1)
+
+        # 对前面得到的fea进行全连接,得到2048个全局特征. 在这2048个全局特征的基础上做分类.分类的结果代表相应位置是车道线的点的概率.
+        self.cls_in_dim = int(8 * int( 1 + (size[1]/32)) * (size[0]/32)) # resnet完成32倍下采样 1080不能被32整除  注意这里有个坑:除法/会转成float
+        self.cls = torch.nn.Sequential(
+            torch.nn.Linear(self.cls_in_dim, 2048),
+            torch.nn.ReLU(),
+            torch.nn.Linear(2048, self.total_dim),
+        )
+
+        initialize_weights(self.cls)
+
+    def forward(self, x):
+        # print('********************',x.shape)
+        x2,x3,fea = self.model(x)
+        if self.use_aux:
+            x2 = self.aux_header2(x2)
+            x3 = self.aux_header3(x3)
+            x3 = torch.nn.functional.interpolate(x3,scale_factor = 2,mode='bilinear')
+            x4 = self.aux_header4(fea)
+            x4 = torch.nn.functional.interpolate(x4,scale_factor = 4,mode='bilinear')
+            aux_seg = torch.cat([x2,x3,x4],dim=1)
+            aux_seg = self.aux_combine(aux_seg)
+        else:
+            aux_seg = None
+
+        # print('line:{},fea shape={}'.format(get_linenumber(),fea.shape))
+        fea = self.pool(fea)
+        # print('line:{},fea shape={}'.format(get_linenumber(),fea.shape)) #[,8,34,45]
+
+        # print(self.cls_in_dim)
+        fea = fea.view(-1, self.cls_in_dim)
+        group_cls = self.cls(fea).view(-1, *self.cls_dim)
+        # print('group_cls={}'.format(group_cls.shape))
+        
+        if self.use_aux:
+            return group_cls, aux_seg
+
+        return group_cls

@@ -1,7 +1,7 @@
 import torch, os, datetime
 import numpy as np
 
-from model.model import parsingNet
+from model.model import parsingNet,AutocoreNet
 from data.dataloader import get_train_loader
 
 from utils.dist_utils import dist_print, dist_tqdm, is_main_process, DistSummaryWriter
@@ -23,6 +23,7 @@ def inference(net, data_label, use_aux):
     else:
         img, cls_label = data_label
         img, cls_label = img.cuda(), cls_label.long().cuda()
+        # print('****************',img.shape)
         cls_out = net(img)
         return {'cls_out': cls_out, 'cls_label': cls_label}
 
@@ -88,10 +89,6 @@ def train(net, data_loader, loss_dict, optimizer, scheduler,logger, epoch, metri
         t_data_0 = time.time()
         
 
-
-
-
-
 if __name__ == "__main__":
     torch.backends.cudnn.benchmark = True
 
@@ -114,7 +111,10 @@ if __name__ == "__main__":
     train_loader, cls_num_per_lane = get_train_loader(cfg.batch_size, cfg.data_root, cfg.griding_num, cfg.dataset, cfg.use_aux, distributed, cfg.num_lanes)
 
     net = parsingNet(pretrained = True, backbone=cfg.backbone,cls_dim = (cfg.griding_num+1,cls_num_per_lane, cfg.num_lanes),use_aux=cfg.use_aux).cuda()
-
+    if cfg.dataset == 'Autocore':
+        print('*************',cls_num_per_lane)
+        net = AutocoreNet(pretrained = True, backbone=cfg.backbone,cls_dim = (cfg.griding_num+1,cls_num_per_lane, cfg.num_lanes),use_aux=cfg.use_aux).cuda()
+        
     if distributed:
         net = torch.nn.parallel.DistributedDataParallel(net, device_ids = [args.local_rank])
     optimizer = get_optimizer(net, cfg)

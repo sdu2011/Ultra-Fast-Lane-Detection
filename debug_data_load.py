@@ -14,6 +14,7 @@ from utils.common import get_work_dir, get_logger
 import time
 
 if __name__ == "__main__":
+    """usage:python debug_data_load.py configs/tusimple.py"""
     torch.backends.cudnn.benchmark = True
 
     args, cfg = merge_config()

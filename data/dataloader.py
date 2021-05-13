@@ -3,8 +3,8 @@ import numpy as np
 
 import torchvision.transforms as transforms
 import data.mytransforms as mytransforms
-from data.constant import tusimple_row_anchor, culane_row_anchor
-from data.dataset import LaneClsDataset, LaneTestDataset
+from data.constant import tusimple_row_anchor, culane_row_anchor,autocore_row_anchor
+from data.dataset import LaneClsDataset, LaneTestDataset,AutocoreLaneClsDataset
 
 def get_train_loader(batch_size, data_root, griding_num, dataset, use_aux, distributed, num_lanes):
     target_transform = transforms.Compose([
@@ -44,6 +44,19 @@ def get_train_loader(batch_size, data_root, griding_num, dataset, use_aux, distr
                                            row_anchor = tusimple_row_anchor,
                                            segment_transform=segment_transform,use_aux=use_aux, num_lanes = num_lanes)
         cls_num_per_lane = 56
+    elif dataset == 'Autocore':
+        img_transform = transforms.Compose([
+            transforms.ToTensor(),
+            # transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+        ])
+        train_dataset = AutocoreLaneClsDataset(data_root,
+                                           os.path.join(data_root, 'train_gt.txt'),
+                                           img_transform=img_transform, target_transform=None,
+                                           simu_transform = None,
+                                           griding_num=griding_num, 
+                                           row_anchor = autocore_row_anchor,
+                                           segment_transform=None,use_aux=use_aux, num_lanes = num_lanes)
+        cls_num_per_lane = 9
     else:
         raise NotImplementedError
 

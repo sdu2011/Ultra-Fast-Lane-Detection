@@ -1,0 +1,98 @@
+
+from model.model import AutocoreNet
+from data.constant import autocore_row_anchor
+from utils.common import merge_config, save_model, cp_projects
+from utils.common import get_work_dir, get_logger
+from utils.tool_func import get_linenumber
+
+import torch, os
+import scipy.special
+import numpy as np
+import cv2
+
+
+if __name__ == "__main__":
+    args, cfg = merge_config()
+
+    print(autocore_row_anchor)
+    cls_num_per_lane=len(autocore_row_anchor)
+    ## !!注意net是.cuda()的话 input也要相应的拷贝到gpu
+    net = AutocoreNet(pretrained = True, backbone=cfg.backbone,cls_dim = (cfg.griding_num+1,cls_num_per_lane, cfg.num_lanes),use_aux=cfg.use_aux).cuda()
+    test_model = '/home/train/hdd/sc/work/logs/20210513_172314_lr_4e-04_b_16/ep153.pth'
+
+    # 准备模型输入
+    imPath= './download/lishui_tl.png'
+    img = cv2.imread(imPath)
+    img = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
+    img = img / 255.
+    input = np.zeros([2, 3, 1080, 1440], dtype=np.float32)
+    input[0,:,:,:] = img.transpose(2,0,1)
+    input = torch.from_numpy(input)
+
+    # 加载model
+    state_dict = torch.load(test_model, map_location='cpu')['model']
+    compatible_state_dict = {}
+    for k, v in state_dict.items():
+        # print(k)
+        if 'module.' in k:
+            compatible_state_dict[k[7:]] = v
+        else:
+            compatible_state_dict[k] = v
+
+    net.load_state_dict(compatible_state_dict, strict=False)
+    net.eval()
+    print('model load success')
+
+    # 推理
+    input=input.cuda()
+    out = net(input)
+    # print(out.shape) 
+
+    # 后处理
+    out_j = out[0].data.cpu().numpy() #[grid+1,anchor_lane_number,max_lane_num]
+    out_j = out_j[:, ::-1, :] #h这个维度倒序?
+    # print(''out_j.shape)
+    prob = scipy.special.softmax(out_j[:-1, :, :], axis=0) #grid这个维度只对前grid个值求概率 最后一个值用来表示是否存在车道线的点
+    # print('prob shape={}'.format(prob.shape))
+    # print(prob[5,7,1]) #第7个参考行的第五个grid是第1条车道线的概率
+
+    
+    idx = np.arange(cfg.griding_num) + 1
+    # print('idx shape={}'.format(idx.shape))
+    # print('idx={}'.format(idx))
+    # print(type(idx))
+    idx = idx.reshape(-1, 1, 1)
+    # print('idx shape={}'.format(idx.shape))
+    # print('idx={}'.format(idx))
+
+    #这里作者没有直接用loc=argmax(prob,axis=0)求最大概率的位置. 原因如下:https://github.com/cfzd/Ultra-Fast-Lane-Detection/issues/99
+    loc = np.sum(prob * idx, axis=0)   #loc为18 * 4矩阵,值为该位置的grid的期望.
+    print('line{},out_j shape={}'.format(get_linenumber(),out_j.shape))
+    out_j = np.argmax(out_j, axis=0) # 求出概率最大的下标
+    print('line{},out_j shape={}'.format(get_linenumber(),out_j.shape))
+    loc[out_j == cfg.griding_num] = 0 #如果概率最大的下标为gridding_num的话说明是grid+1中的那个1. 则把loc相应位置的值置为0.表示在这个位置无车道线点.?
+    out_j = loc
+    # print('out_j shape={}'.format(out_j.shape))
+    # print('out_j={}'.format(out_j))
+
+    col_sample = np.linspace(0, 1440 - 1, cfg.griding_num) 
+    col_sample_w = col_sample[1] - col_sample[0] # 每个grid的像素数目
+
+    #out_j.shape=(18,4)
+    vis = cv2.imread(imPath)
+    for i in range(out_j.shape[1]):  #遍历每条车道线
+        if np.sum(out_j[:, i] != 0) > 2: #对车道线i来说,要至少两个点才处理
+            for k in range(out_j.shape[0]): #遍历每个参考行
+                if out_j[k, i] > 0:  #k代表行 i代表grid
+                    #图中的车道点位置
+                    point_w =  int(out_j[k, i] * col_sample_w) - 1
+                    point_h = int(autocore_row_anchor[len(autocore_row_anchor)-1-k]) - 1
+                    ppp = (point_w,  point_h)
+                    # print(out_j[k, i])
+
+                    cv2.circle(vis,ppp,5,(0,255,0),-1)
+    
+    # cv2.imshow('lane',vis)
+    # cv2.waitKey(0)
+
+    cv2.imwrite('./lane.jpg',vis)
