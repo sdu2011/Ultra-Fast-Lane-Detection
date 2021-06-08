@@ -17,8 +17,7 @@ LaneDetector::LaneDetector()
     net_ptr_.reset(new Tn::TrtNet("../data/ep153.onnx",Tn::RUN_MODE::FLOAT32));
 
     int outputCount = net_ptr_->getOutputSize() / sizeof(float);
-    cout<<"outputCount="<<outputCount<<endl;
-
+    // cout<<"outputCount="<<outputCount<<endl;
     result_.reserve(outputCount);
 
     nvinfer1::Dims dims = net_ptr_->get_output_dims();
@@ -180,7 +179,7 @@ void LaneDetector::post_process(float* output_data,vector<float> & positions)
                 grid_exp = 0;
             }
 
-            cout<<"grid_exp="<<grid_exp<<endl;
+            // cout<<"grid_exp="<<grid_exp<<endl;
     
             positions.push_back(grid_exp);
         }            
@@ -239,16 +238,8 @@ std::vector<double> LaneDetector::linspace(double start_in, double end_in, int n
 
 void LaneDetector::detect(cv::Mat & in_img)
 {
-    // cout<<"line:"<<__LINE__<<endl;
+    result_.clear();
     vector<float> input = prepareImage(in_img);
-    // cout<<"input size="<<input.size()<<endl;
-    // cout<<"line:"<<__LINE__<<endl;
-
-    int outputCount = net_ptr_->getOutputSize() / sizeof(float);
-    // cout<<"line:"<<__LINE__<<endl;
-
-    // std::uniq_ptr<float[]> output_data(new float[outputCount]);
-    // cout<<"line:"<<__LINE__<<endl;
 
     net_ptr_->doInference(input.data(),result_.data());
 

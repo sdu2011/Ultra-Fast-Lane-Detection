@@ -206,7 +206,7 @@ void TrtNet::initEngine()
 
     //input and output number
     int nbBindings = mTrtEngine->getNbBindings();
-    cout<<"nbBindings="<<nbBindings<<endl;
+    // cout<<"nbBindings="<<nbBindings<<endl;
 
     //malloc buffer for inputs and outputs
     mTrtCudaBuffer.resize(nbBindings);
@@ -217,7 +217,7 @@ void TrtNet::initEngine()
         DataType dtype = mTrtEngine->getBindingDataType(i);
         int64_t totalSize = volume(dims) * maxBatchSize * getElementSize(dtype);
         mTrtBindBufferSize[i] = totalSize;
-        cout<<"mTrtBindBufferSize["<<i<<"]="<<totalSize<<endl;
+        // cout<<"mTrtBindBufferSize["<<i<<"]="<<totalSize<<endl;
         mTrtCudaBuffer[i] = safeCudaMalloc(totalSize);
         if (mTrtEngine->bindingIsInput(i)) 
         {
@@ -230,18 +230,18 @@ void TrtNet::initEngine()
 
 void TrtNet::doInference(const void * inputData, void * outputData)
 {
-    std::cout << " begin" << std::endl;
+    // std::cout << " begin" << std::endl;
 
     static const int batchSize = 1;
 
-    cout<<"line:"<<__LINE__<<endl;
-    cout<<"mTrtBindBufferSize[0]"<<mTrtBindBufferSize[0]<<endl;
+    // cout<<"line:"<<__LINE__<<endl;
+    // cout<<"mTrtBindBufferSize[0]"<<mTrtBindBufferSize[0]<<endl;
     //model has only one input
     CUDA_CHECK(
         cudaMemcpyAsync(mTrtCudaBuffer[0], inputData, mTrtBindBufferSize[0], cudaMemcpyHostToDevice,
         mTrtCudaStream)
         );
-    cout<<"line:"<<__LINE__<<endl;
+    // cout<<"line:"<<__LINE__<<endl;
     auto t_start = std::chrono::high_resolution_clock::now();
 
     //prepare input/output pointer
@@ -249,10 +249,8 @@ void TrtNet::doInference(const void * inputData, void * outputData)
     bindings[0] = mTrtCudaBuffer[0]; //input
     bindings[1] = mTrtCudaBuffer[1]; //output
 
-    cout<<"line:"<<__LINE__<<endl;
     // mTrtContext->executeV2(bindings);
     mTrtContext->enqueueV2(bindings, mTrtCudaStream, nullptr);
-    cout<<"line:"<<__LINE__<<endl;
     auto t_end = std::chrono::high_resolution_clock::now();
     float total = std::chrono::duration<float, std::milli>(t_end - t_start).count();
 
@@ -278,7 +276,7 @@ size_t TrtNet::getOutputSize()
     size_t len = 0;
     len = std::accumulate(mTrtBindBufferSize.begin() + mTrtInputCount, mTrtBindBufferSize.end(), 0);
 
-    cout<<"len="<<len<<endl;
+    // cout<<"len="<<len<<endl;
     return len;
 };
 
