@@ -86,7 +86,7 @@ def generate_segmentation_and_train_list(root, label_info,train_gt_fp):
             lane_ids.append(i)
 
     # cv2.imshow("label_img",label_img)
-    label_img_path = label_info['imagePath'][:-3] + 'jpg'
+    label_img_path = label_info['imagePath'][:-3] + 'png'
     cv2.imwrite(os.path.join(root,label_img_path),label_img)
 
     origin_img_path = label_info['imagePath']
@@ -103,9 +103,18 @@ if __name__ == "__main__":
     args = get_args().parse_args()
 
     # training set
+    labels = []
+    for e in os.listdir(args.root):
+        if e[-4:] == 'json':
+            #img_name = e[:-4] + 'jpg'
+            print(e)
+            labels.append(e)
+    print(labels)
+
     train_gt_fp = open(os.path.join(args.root,'train_gt.txt'),'w')
-    for label in ['lishui_tl.json','lishui02.json']:
+    for label in labels:
         label_info = get_autocore_list(args.root,label)
+        print(label_info)
         # # generate segmentation and training list for training
         generate_segmentation_and_train_list(args.root, label_info,train_gt_fp)
 

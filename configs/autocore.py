@@ -33,11 +33,11 @@ note = ''
 log_path = '/home/train/hdd/sc/work/logs'
 
 # FINETUNE or RESUME MODEL PATH
-finetune = None
+finetune = '/home/train/hdd/sc/work/logs/20210611_175335_lr_4e-04_b_16/ep097.pth'
 resume = None
 
 # TEST
-test_model = None
-test_work_dir = None
+test_model = '/home/train/hdd/sc/work/logs/20210611_181305_lr_4e-04_b_16/ep499.pth'
+test_work_dir = '/home/train/hdd/sc/data/lane/rosbag0610'
 
-num_lanes = 2
+num_lanes = 4
