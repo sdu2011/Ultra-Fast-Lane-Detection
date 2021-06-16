@@ -134,6 +134,8 @@ def lane_detect(imPath,net,export_onnx=False,onnx_model_name='./lane.onnx'):
 
     cv2.imwrite('./lane.jpg',vis)
 
+    return vis
+
 
 if __name__ == "__main__":
     """
@@ -155,12 +157,15 @@ if __name__ == "__main__":
             test_imgs.append(full_path)
 
     # print(test_imgs)
-
+    fourcc = cv2.VideoWriter_fourcc(*'MJPG')
+    vout = cv2.VideoWriter('lane_detect.avi', fourcc , 10.0, (1440, 1080))
     for img in test_imgs:
         # imPath= '/home/train/hdd/sc/data/lane/autocore/frame0450.jpg'   
         # onnx_model_name = cfg.test_model[-9:-4] + '.onnx' 
         print(img)
-        lane_detect(img,net,export_onnx=False)
+        vis = lane_detect(img,net,export_onnx=False)
+        vout.write(vis)
+    vout.release()
     
 
     # print(autocore_row_anchor)
