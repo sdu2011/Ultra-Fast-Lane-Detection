@@ -4,5 +4,7 @@ export OMP_NUM_THREADS=1 # you can change this value according to your number of
 
 
 # python -m torch.distributed.launch --nproc_per_node=$NGPUS train.py configs/culane.py
+export CUDA_VISIBLE_DEVICES=1,2
+export NGPUS=2
 python -m torch.distributed.launch --nproc_per_node=$NGPUS train.py configs/autocore.py
 # python train.py configs/tusimple.py

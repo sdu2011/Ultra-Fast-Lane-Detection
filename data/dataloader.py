@@ -49,10 +49,17 @@ def get_train_loader(batch_size, data_root, griding_num, dataset, use_aux, distr
             transforms.ToTensor(),
             # transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
         ])
+        simu_transform = mytransforms.Compose2([
+                mytransforms.RandomRotate(6),
+                mytransforms.RandomColorBright(2),
+                mytransforms.RandomColorContrast(3)
+                # mytransforms.RandomUDoffsetLABEL(100),
+                # mytransforms.RandomLROffsetLABEL(200)
+            ])
         train_dataset = AutocoreLaneClsDataset(data_root,
                                            os.path.join(data_root, 'train_gt.txt'),
                                            img_transform=img_transform, target_transform=None,
-                                           simu_transform = None,
+                                           simu_transform = simu_transform,
                                            griding_num=griding_num, 
                                            row_anchor = autocore_row_anchor,
                                            segment_transform=None,use_aux=use_aux, num_lanes = num_lanes)

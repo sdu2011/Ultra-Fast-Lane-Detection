@@ -70,49 +70,55 @@ def lane_detect(imPath,net,export_onnx=False,onnx_model_name='./lane.onnx'):
 
     # 后处理
     out_j = out[0].data.cpu().numpy() #[grid+1,anchor_lane_number,max_lane_num]
-    print('out_j[3,2,1]={}'.format(out_j[0,0,0]))
+    # print('out_j[3,2,1]={}'.format(out_j[0,0,0]))
 
     # out_j = out_j[:, ::-1, :] #h这个维度倒序?
     
     debug_row,debug_lane = 1,0
-    print('out_j[:,{},{}]={}'.format(debug_row,debug_lane,out_j[:,debug_row,debug_lane]))
-
+    truth_grid=76
+    # print('out_j[:,{},{}]={}'.format(debug_row,debug_lane,out_j[:,debug_row,debug_lane]))
 
     prob = scipy.special.softmax(out_j[:-1, :, :], axis=0) #grid这个维度只对前grid个值求概率 最后一个值用来表示是否存在车道线的点
-    print('prob shape={}'.format(prob.shape))
+    # print('prob shape={}'.format(prob.shape))
     
-    debug_row,debug_lane = 1,0
-    print('prob[:,{},{}]={}'.format(debug_row,debug_lane,prob[:,debug_row,debug_lane]))
+    debug_row,debug_lane = 0,0
+    # print('prob[:,{},{}]={}'.format(debug_row,debug_lane,prob[truth_grid,debug_row,debug_lane]))
+    print('prob[:,{},{}]={}'.format(debug_row,debug_lane,prob[75:85,debug_row,debug_lane]))
     
     idx = np.arange(cfg.griding_num) + 1
     # print('idx shape={}'.format(idx.shape))
     # print('idx={}'.format(idx))
     # print(type(idx))
     idx = idx.reshape(-1, 1, 1)
-    print('idx shape={}'.format(idx.shape))
+    # print('idx shape={}'.format(idx.shape))
     # print('idx={}'.format(idx))
 
-    #这里作者没有直接用loc=argmax(prob,axis=0)求最大概率的位置. 原因如下:https://github.com/cfzd/Ultra-Fast-Lane-Detection/issues/99
-    print('prob*idx shape={}'.format((prob*idx).shape))
+    solve_loc = 'argmax' #argmax or expection
+    if solve_loc == 'expection':
+        #这里作者没有直接用loc=argmax(prob,axis=0)求最大概率的位置. 原因如下:https://github.com/cfzd/Ultra-Fast-Lane-Detection/issues/99
+        # print('prob*idx shape={}'.format((prob*idx).shape))
 
-    loc_exp = prob * idx
-    debug_row,debug_lane = 1,0
-    print('loc_exp[:,{},{}]={}'.format(debug_row,debug_lane,loc_exp[:,debug_row,debug_lane]))
-    print('loc_exp[:,{},{}]={}'.format(debug_row,debug_lane,np.sum(loc_exp[:,debug_row,debug_lane])))
-    
-    loc = np.sum(prob * idx, axis=0)   #loc为18 * 4矩阵,值为该位置的grid的期望.
-    # print('line{},out_j shape={}'.format(get_linenumber(),out_j.shape))
-    print('line{},loc shape={}'.format(get_linenumber(),loc.shape))
-    # print('loc[0,0]={}'.format(loc[1,0]))
+        loc_exp = prob * idx
+        debug_row,debug_lane = 1,0
+        # print('loc_exp[:,{},{}]={}'.format(debug_row,debug_lane,loc_exp[:,debug_row,debug_lane]))
+        # print('loc_exp[:,{},{}]={}'.format(debug_row,debug_lane,np.sum(loc_exp[:,debug_row,debug_lane])))
+        
+        loc = np.sum(prob * idx, axis=0)   #loc为18 * 4矩阵,值为该位置的grid的期望.
+        # print('line{},out_j shape={}'.format(get_linenumber(),out_j.shape))
+        # print('line{},loc shape={}'.format(get_linenumber(),loc.shape))
+        # print('loc[0,0]={}'.format(loc[1,0]))
+    elif solve_loc == 'argmax':
+        loc = np.argmax(prob,axis=0)
 
     out_j = np.argmax(out_j, axis=0) # 求出概率最大的下标
-    print('line{},out_j shape={}'.format(get_linenumber(),out_j.shape))
+    # print('line{},out_j shape={}'.format(get_linenumber(),out_j.shape))
     loc[out_j == cfg.griding_num] = 0 #如果概率最大的下标为gridding_num的话说明是grid+1中的那个1. 则把loc相应位置的值置为0.表示在这个位置无车道线点.?
     out_j = loc
     # print('out_j shape={}'.format(out_j.shape))
     print('out_j={}'.format(out_j))
 
     col_sample = np.linspace(0, 1440 - 1, cfg.griding_num) 
+    print('cfg.griding_num={}'.format(cfg.griding_num))
     col_sample_w = col_sample[1] - col_sample[0] # 每个grid的像素数目
 
     #out_j.shape=(18,4)
@@ -139,11 +145,11 @@ def lane_detect(imPath,net,export_onnx=False,onnx_model_name='./lane.onnx'):
 
 if __name__ == "__main__":
     """
-    python debug_inference.py
+    python debug_inference2.py
     """
-    # args, cfg = merge_config()
+    args, cfg = merge_config()
 
-    cfg = autocore_cfg
+    # cfg = autocore_cfg
     net = load_model(cfg)
 
     test_imgs = []
@@ -154,15 +160,22 @@ if __name__ == "__main__":
             #img_name = e[:-4] + 'jpg'
             # print(e)
             full_path = '{}/{}'.format(cfg.test_work_dir,e)
-            test_imgs.append(full_path)
+            # json_path = full_path[:-3] + 'json'
+            # if os.path.isfile(json_path):
+            #     test_imgs.append(full_path)
 
+            test_imgs.append(full_path)
+    
+    #排序,key为x[-8:-4]
+    test_imgs.sort(key=lambda x:int(x[-8:-4]))
     # print(test_imgs)
+    
     fourcc = cv2.VideoWriter_fourcc(*'MJPG')
     vout = cv2.VideoWriter('lane_detect.avi', fourcc , 10.0, (1440, 1080))
-    for img in test_imgs:
+    for i,img in enumerate(test_imgs):
         # imPath= '/home/train/hdd/sc/data/lane/autocore/frame0450.jpg'   
         # onnx_model_name = cfg.test_model[-9:-4] + '.onnx' 
-        print(img)
+        print(i,':',img)
         vis = lane_detect(img,net,export_onnx=False)
         vout.write(vis)
     vout.release()

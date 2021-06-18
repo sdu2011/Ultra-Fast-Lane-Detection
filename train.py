@@ -116,6 +116,7 @@ if __name__ == "__main__":
         net = AutocoreNet(pretrained = True, backbone=cfg.backbone,cls_dim = (cfg.griding_num+1,cls_num_per_lane, cfg.num_lanes),use_aux=cfg.use_aux).cuda()
         
     if distributed:
+        print('*****************************multi gpu**********************,device_ids={}'.format(args.local_rank))
         net = torch.nn.parallel.DistributedDataParallel(net, device_ids = [args.local_rank])
     optimizer = get_optimizer(net, cfg)
 
