@@ -1,7 +1,7 @@
 # DATA
 # dataset='Tusimple'
 dataset='Autocore'
-data_root = '/home/train/hdd/sc/data/lane/autocore'
+data_root = '/home/suchang/data/lane/autocore'
 
 # TRAIN
 epoch = 500
@@ -32,7 +32,7 @@ shp_loss_w = 0.0
 # EXP
 note = ''
 
-log_path = '/home/train/hdd/sc/work/logs'
+log_path = '/home/suchang/work/logs'
 
 # FINETUNE or RESUME MODEL PATH
 finetune = None
@@ -54,9 +54,10 @@ resume = None
 # test_model = '/home/train/hdd/sc/work/logs/20210617_155303_lr_4e-04_b_12/ep067.pth'
 # test_model = '/home/train/hdd/sc/work/logs/20210617_164050_lr_4e-04_b_8/ep038.pth'
 # test_model = '/home/train/hdd/sc/work/logs/20210617_183715_lr_4e-04_b_8/ep013.pth'
-test_model = '/home/train/hdd/sc/work/logs/20210618_103634_lr_4e-04_b_8/ep028.pth'
+# test_model = '/home/train/hdd/sc/work/logs/20210618_103634_lr_4e-04_b_8/ep028.pth'
+test_model = '/home/suchang/work/logs/20210630_181641_lr_4e-04_b_8/ep037.pth'
 
 # test_work_dir = '/home/train/hdd/sc/data/lane/rosbag0610'
-test_work_dir = '/home/train/hdd/sc/data/lane/autocore_test'
+test_work_dir = '/home/suchang/data/lane/autocore_0622_test'
 
 num_lanes = 4

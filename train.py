@@ -151,5 +151,6 @@ if __name__ == "__main__":
 
         train(net, train_loader, loss_dict, optimizer, scheduler,logger, epoch, metric_dict, cfg.use_aux)
         
-        save_model(net, optimizer, epoch ,work_dir, distributed)
+        if epoch % 10 == 0:
+            save_model(net, optimizer, epoch ,work_dir, distributed)
     logger.close()

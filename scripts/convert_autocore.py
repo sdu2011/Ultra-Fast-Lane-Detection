@@ -99,7 +99,7 @@ def get_args():
     return parser
 
 if __name__ == "__main__":
-    """usage: python convert_autocore.py --root /home/train/hdd/sc/data/lane/autocore"""
+    """usage: python convert_autocore.py --root /home/suchang/data/lane/autocore_0622"""
     args = get_args().parse_args()
 
     # training set
