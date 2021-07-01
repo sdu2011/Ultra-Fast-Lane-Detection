@@ -1,7 +1,7 @@
 # DATA
 # dataset='Tusimple'
 dataset='Autocore'
-data_root = '/home/suchang/data/lane/autocore'
+data_root = '/home/suchang/data/lane/autocore_0622'
 
 # TRAIN
 epoch = 500
@@ -20,6 +20,7 @@ warmup = 'linear'
 warmup_iters = 100
 
 # NETWORK
+# backbone = '34'
 backbone = '34'
 griding_num = 100
 # griding_num = 200
@@ -55,7 +56,11 @@ resume = None
 # test_model = '/home/train/hdd/sc/work/logs/20210617_164050_lr_4e-04_b_8/ep038.pth'
 # test_model = '/home/train/hdd/sc/work/logs/20210617_183715_lr_4e-04_b_8/ep013.pth'
 # test_model = '/home/train/hdd/sc/work/logs/20210618_103634_lr_4e-04_b_8/ep028.pth'
-test_model = '/home/suchang/work/logs/20210630_181641_lr_4e-04_b_8/ep037.pth'
+# test_model = '/home/suchang/work/logs/20210630_181641_lr_4e-04_b_8/ep037.pth'
+# test_model = '/home/suchang/work/logs/20210630_183412_lr_4e-04_b_8/ep490.pth'
+# test_model = '/home/suchang/work/logs/20210701_111648_lr_4e-04_b_8/ep050.pth'
+# test_model = '/home/suchang/work/logs/20210701_145246_lr_4e-04_b_8/ep180.pth'
+test_model = '/home/suchang/work/logs/20210701_173126_lr_4e-04_b_1/ep010.pth'
 
 # test_work_dir = '/home/train/hdd/sc/data/lane/rosbag0610'
 test_work_dir = '/home/suchang/data/lane/autocore_0622_test'

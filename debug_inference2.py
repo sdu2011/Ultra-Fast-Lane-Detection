@@ -83,7 +83,7 @@ def lane_detect(imPath,net,export_onnx=False,onnx_model_name='./lane.onnx'):
     
     debug_row,debug_lane = 0,0
     # print('prob[:,{},{}]={}'.format(debug_row,debug_lane,prob[truth_grid,debug_row,debug_lane]))
-    print('prob[:,{},{}]={}'.format(debug_row,debug_lane,prob[75:85,debug_row,debug_lane]))
+    print('prob[:,{},{}]={}'.format(debug_row,debug_lane,prob[74:85,debug_row,debug_lane]))
     
     idx = np.arange(cfg.griding_num) + 1
     # print('idx shape={}'.format(idx.shape))

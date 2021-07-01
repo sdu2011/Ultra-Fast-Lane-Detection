@@ -69,7 +69,7 @@ def get_autocore_list(root,label):
     return label_info
 
 def generate_segmentation_and_train_list(root, label_info,train_gt_fp):
-    print(label_info)
+    # print(label_info)
     
     label_img = np.zeros((1080,1440),dtype=np.uint8)
     
@@ -77,13 +77,31 @@ def generate_segmentation_and_train_list(root, label_info,train_gt_fp):
     
     #绘制label  记录下车道线id
     lane_ids=[]
-    for i in range(1,lane_num + 1):
-        key = 'lane{}'.format(i)
-        if key in label_info.keys():
-            lane_points = label_info['lane{}'.format(i)]
-            draw(label_img,lane_points,i)
+    print(label_info.keys())
+    for key in label_info.keys():
+        if key.startswith( 'lane' ):
+            lane_points = label_info[key]
+            
+            lane_idx = 0
+            if key == 'lane_l':
+                lane_idx = 1
+            elif key == 'lane_r':
+                lane_idx = 4
+            else:
+                lane_idx = 1 + int(key[-1])
+            
+            lane_ids.append(lane_idx)
 
-            lane_ids.append(i)
+            draw(label_img,lane_points,lane_idx)
+    
+    # for i in range(1,lane_num + 1):
+    #     # key = 'lane{}'.format(i)
+
+    #     if key in label_info.keys():
+    #         lane_points = label_info['lane{}'.format(i)]
+    #         draw(label_img,lane_points,i)
+
+    #         lane_ids.append(i)
 
     # cv2.imshow("label_img",label_img)
     label_img_path = label_info['imagePath'][:-3] + 'png'
@@ -107,14 +125,14 @@ if __name__ == "__main__":
     for e in os.listdir(args.root):
         if e[-4:] == 'json':
             #img_name = e[:-4] + 'jpg'
-            print(e)
+            # print(e)
             labels.append(e)
-    print(labels)
+    # print(labels)
 
     train_gt_fp = open(os.path.join(args.root,'train_gt.txt'),'w')
     for label in labels:
         label_info = get_autocore_list(args.root,label)
-        print(label_info)
+        # print(label_info)
         # # generate segmentation and training list for training
         generate_segmentation_and_train_list(args.root, label_info,train_gt_fp)
 

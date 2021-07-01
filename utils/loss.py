@@ -4,6 +4,10 @@ import torch.nn.functional as F
 
 import numpy as np
 
+import sys
+sys.path.append("..")
+from data import constant
+
 class OhemCELoss(nn.Module):
     def __init__(self, thresh, n_min, ignore_lb=255, *args, **kwargs):
         super(OhemCELoss, self).__init__()
@@ -37,26 +41,42 @@ class SoftmaxFocalLoss(nn.Module):
         log_score = factor * log_score#每个元素都变成w*log(p)
         loss = self.nll(log_score, labels)#取labels标识的log_score求平均
         # print('loss={}'.format(loss))
+        
+        ###################################################################
 
         #debug code 
-        # print('scores={}'.format(scores.shape)) #lane1 [1,101,9,4]
+        # # print('scores={}'.format(scores.shape)) #lane1 [1,101,9,4]
         # print('labels={}'.format(labels.shape) )#lane1 [1,9,4]
-        # lane1_pre= scores[0,:,:,0].cpu() #[101,9]
-        # print('lane1_pre shape={}'.format(lane1_pre.shape))
-        # lane1_loc = labels[0,:,0] 
-        # print(lane1_loc)
+        # # lane1_pre= scores[0,:,:,0].cpu() #[101,9]
+        # # print('lane1_pre shape={}'.format(lane1_pre.shape))
+        # # lane1_loc = labels[0,:,0] 
+        # # print(lane1_loc)
+        # lane_idx = 3
+        # lane_right_loc = labels[0,:,lane_idx]
+        # print('lane_right_loc={}'.format(lane_right_loc))
         
         # scores = scores.cpu()
         # labels = labels.cpu() #cpu上的错误提示更友好一些
         # lane_num = labels.shape[2]
         # anchor_row_num = labels.shape[1]
         # for i in range(anchor_row_num):
-        #     for j in range(lane_num):
-        #         if j == 0:  #debug lane1
+        #     for j in range(0,lane_num):
+        #         # if j == 0:  #debug lane_left
+        #         #     truth_grid = labels[0,i,j] #acnhor_row_i truth grid
+        #         #     # true_grid_preprob = lane1_pre.index_select(0,lane1_loc.cpu()) #在维度1上选择特定下标
+        #         #     pre_prob = scores[0,truth_grid,i,j]
+        #         #     print('lane_left,anchor{},truth_grid={},prob={}'.format(i,truth_grid,pre_prob))
+        #         if j == lane_num - 1: #debug lane_right
         #             truth_grid = labels[0,i,j] #acnhor_row_i truth grid
         #             # true_grid_preprob = lane1_pre.index_select(0,lane1_loc.cpu()) #在维度1上选择特定下标
         #             pre_prob = scores[0,truth_grid,i,j]
-        #             print('lane{},anchor{},truth_grid={},prob={}'.format(j,i,truth_grid,pre_prob))
+
+        #             grid = 100
+        #             pixel_loc = truth_grid * 1440/grid
+        #             anchor_r = constant.autocore_row_anchor[i]
+        #             print('lane_right,row={},truth_grid={},pixel_loc={},prob={}'.format(anchor_r,truth_grid,pixel_loc,pre_prob))
+
+        ###################################################################
 
         return loss
 
