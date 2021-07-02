@@ -38,12 +38,39 @@ def load_model(cfg):
 
     return net
 
-def lane_detect(imPath,net,export_onnx=False,onnx_model_name='./lane.onnx'):
+def img_resize(img,width,height):
+    origin_w,origin_h = img.shape[1],img.shape[0]
+    origin_r = 1.0*origin_w/origin_h
+
+    empty_img=np.zeros([height,width,3],dtype=np.uint8)
+    dim = None
+    resized = None
+    r = 1.0*width/height
+    if origin_r < r:
+        #新的图片的h = height
+        r = height / float(origin_h)
+        dim = (int(origin_w * r), height)
+        print(dim)
+        resized = cv2.resize(img, dim)
+        print(resized.shape)
+        w_diff = int(width - int(origin_w * r))/2
+        w_start,w_end = int(w_diff),int(width - w_diff)
+        print(w_start,w_end)
+        empty_img[:,w_start:w_end,:] = resized
+    else:
+        r = width / float(origin_w)
+        dim = (width, int(origin_h * r))
+
+    return empty_img
+
+def lane_detect(imPath,net,export_onnx=False,onnx_model_name='./lane.onnx',downsample_dim=(1440,1080)):
+    new_w,new_h =  downsample_dim[0],downsample_dim[1]
 
     img = cv2.imread(imPath)
+    img = img_resize(img,width=new_w,height=new_h)
     img = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
     img = img / 255.
-    input = np.zeros([1, 3, 1080, 1440], dtype=np.float32)
+    input = np.zeros([1, 3, new_h, new_w], dtype=np.float32)
     input[0,:,:,:] = img.transpose(2,0,1)
     input = torch.from_numpy(input)
 

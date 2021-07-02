@@ -46,7 +46,7 @@ class SoftmaxFocalLoss(nn.Module):
 
         #debug code 
         # # print('scores={}'.format(scores.shape)) #lane1 [1,101,9,4]
-        # print('labels={}'.format(labels.shape) )#lane1 [1,9,4]
+        # print('labels={}'.format(labels) )#lane1 [1,9,4]
         # # lane1_pre= scores[0,:,:,0].cpu() #[101,9]
         # # print('lane1_pre shape={}'.format(lane1_pre.shape))
         # # lane1_loc = labels[0,:,0] 

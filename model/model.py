@@ -128,7 +128,7 @@ def real_init_weights(m):
 
 
 class AutocoreNet(torch.nn.Module):
-    def __init__(self, size=(1440, 1080), pretrained=True, backbone='18', cls_dim=(37, 10, 4), use_aux=False):
+    def __init__(self, size=(720, 540), pretrained=True, backbone='18', cls_dim=(37, 10, 4), use_aux=False):
         super(AutocoreNet, self).__init__()
 
         self.size = size
@@ -171,7 +171,8 @@ class AutocoreNet(torch.nn.Module):
         self.pool = torch.nn.Conv2d(512,8,1) if backbone in ['34','18'] else torch.nn.Conv2d(2048,8,1)
 
         # 对前面得到的fea进行全连接,得到2048个全局特征. 在这2048个全局特征的基础上做分类.分类的结果代表相应位置是车道线的点的概率.
-        self.cls_in_dim = int(8 * int( 1 + (size[1]/32)) * (size[0]/32)) # resnet完成32倍下采样 1080不能被32整除  注意这里有个坑:除法/会转成float
+        # self.cls_in_dim = int(8 * int( 1 + (size[1]/32)) * (size[0]/32)) # resnet完成32倍下采样 1080不能被32整除  注意这里有个坑:除法/会转成float
+        self.cls_in_dim = 8 * 17 * 23 # 540 * 720  --->  17 * 23
         self.cls = torch.nn.Sequential(
             torch.nn.Linear(self.cls_in_dim, 2048),
             torch.nn.ReLU(),

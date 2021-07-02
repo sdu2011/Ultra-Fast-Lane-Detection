@@ -45,21 +45,30 @@ def get_train_loader(batch_size, data_root, griding_num, dataset, use_aux, distr
                                            segment_transform=segment_transform,use_aux=use_aux, num_lanes = num_lanes)
         cls_num_per_lane = 56
     elif dataset == 'Autocore':
-        img_transform = transforms.Compose([
-            transforms.ToTensor(),
-            # transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-        ])
-        simu_transform = mytransforms.Compose2([
+        # torch中的transforms大部分是接受PIL.Image和tensor images.少部分只接受PIL.Image
+        # transform = transforms.Compose([
+        #     # transforms.Resize((int(1080/2), int(1440/2))), #原图下采样
+        #     # transforms.ToTensor(),
+        #     # transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+        #     mytransforms.RandomRotate(6),
+        #     # mytransforms.RandomColorBright(2),
+        #     # mytransforms.RandomColorContrast(3)
+        #     # mytransforms.RandomUDoffsetLABEL(100),
+        #     # mytransforms.RandomLROffsetLABEL(200)
+        # ])
+
+        # 有关形状的改变.可以应用到label!!!!!!!!!
+        transform = mytransforms.Compose2([
                 # mytransforms.RandomRotate(6),
                 # mytransforms.RandomColorBright(2),
                 # mytransforms.RandomColorContrast(3)
                 # mytransforms.RandomUDoffsetLABEL(100),
                 # mytransforms.RandomLROffsetLABEL(200)
+                mytransforms.Resize(dim=(720,540)) #原始图像w=1440,h=1080  下采样以减少全连接层参数数量.
             ])
         train_dataset = AutocoreLaneClsDataset(data_root,
                                            os.path.join(data_root, 'train_gt.txt'),
-                                           img_transform=img_transform, target_transform=None,
-                                           simu_transform = simu_transform,
+                                           transform=transform,
                                            griding_num=griding_num, 
                                            row_anchor = autocore_row_anchor,
                                            segment_transform=None,use_aux=use_aux, num_lanes = num_lanes)
