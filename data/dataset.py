@@ -5,7 +5,7 @@ import pdb
 import numpy as np
 import cv2
 from data.mytransforms import find_start_pos
-
+import torchvision.transforms as transforms
 
 def loader_func(path):
     return Image.open(path)
@@ -70,11 +70,12 @@ class LaneClsDataset(torch.utils.data.Dataset):
 
         img_path = os.path.join(self.path, img_name)
         img = loader_func(img_path)
-    
+        
         if self.simu_transform is not None:
-            img, label = self.simu_transform(img, label)
+            img, label = self.simu_transform(img, label)  #PIL.Image
+        
         lane_pts = self._get_index(label)  
-        print('lane_pts={}'.format(lane_pts))
+        # print('lane_pts={}'.format(lane_pts))
         # get the coordinates of lanes at row anchors
 
         w, h = img.size
@@ -85,7 +86,7 @@ class LaneClsDataset(torch.utils.data.Dataset):
             seg_label = self.segment_transform(label)
 
         if self.img_transform is not None:
-            img = self.img_transform(img)
+            img = self.img_transform(img)  #Tensor
 
         if self.use_aux:
             return img, cls_label, seg_label
@@ -102,7 +103,7 @@ class LaneClsDataset(torch.utils.data.Dataset):
         col_sample = np.linspace(0, w - 1, num_cols)
 
         assert n2 == 2
-        to_pts = np.zeros((n, num_lane))
+        to_pts = np.zeros((n, num_lane)) #np array
         for i in range(num_lane):
             pti = pts[i, :, 1]
             to_pts[:, i] = np.asarray(
@@ -117,7 +118,7 @@ class LaneClsDataset(torch.utils.data.Dataset):
         #答:因为constant.py中定义的tusimple_row_anchor是以h为288作为参考来定义的.
         if h != 288:
             scale_f = lambda x : int((x * 1.0/288) * h)
-            sample_tmp = list(map(scale_f,self.row_anchor))
+            sample_tmp = list(map(scale_f,self.row_anchor)) #把按照h=288定义的self.row_anchor重映射回真实图像.
 
         #第三个维度存的数据的含义1:原图中的参考行的行数r 2.第r行对应的第x条车道线像素的均值
         #举个具体例子,有10个参考行,其中第5个参考行为原图中的第50行,有两条车道线,lane1的像素在本行的列数为30,31,32,lane2的像素在本行的列数为70,71,72的话,
@@ -179,13 +180,13 @@ class LaneClsDataset(torch.utils.data.Dataset):
 
 
 class AutocoreLaneClsDataset(torch.utils.data.Dataset):
-    def __init__(self, path, list_path, img_transform = None,target_transform = None,simu_transform = None, griding_num=50, load_name = False,
+    def __init__(self, path, list_path, transform = None,griding_num=50, load_name = False,
                 row_anchor = None,use_aux=False,segment_transform=None, num_lanes = 4):
         super(AutocoreLaneClsDataset, self).__init__()
-        self.img_transform = img_transform
-        self.target_transform = target_transform
+        self.transform = transform
+        # self.target_transform = target_transform
         self.segment_transform = segment_transform
-        self.simu_transform = simu_transform
+        # self.simu_transform = simu_transform
         self.path = path
         self.griding_num = griding_num
         self.load_name = load_name
@@ -215,22 +216,31 @@ class AutocoreLaneClsDataset(torch.utils.data.Dataset):
         # 加载原图
         img_path = os.path.join(self.path, img_name)
         img = loader_func(img_path)
-    
-        if self.simu_transform is not None:
-            img, label = self.simu_transform(img, label)
-        lane_pts = self._get_index(label)  
-        # print('lane_pts={}'.format(lane_pts))
-        # get the coordinates of lanes at row anchors
 
+        # 做transform. 注意:只有涉及到shape的变换可以同时对img,label使用,比如resize,rotate等!  涉及到像素值的变换不可以对label使用!
+        if self.transform is not None:
+            # print('self.transform={}'.format(self.transform))
+            img,label = self.transform(img,label)
+
+        # 在变换后的图上寻找lane_pts
+        lane_pts = self._get_index(label)  
+        print('lane_pts={}'.format(lane_pts.shape))
+        # get the coordinates of lanes at row anchors
         w, h = img.size
         cls_label = self._grid_pts(lane_pts, self.griding_num, w)
+        # print('cls_label={}'.format(cls_label))
+
         # make the coordinates to classification label
         if self.use_aux:
             assert self.segment_transform is not None
             seg_label = self.segment_transform(label)
 
-        if self.img_transform is not None:
-            img = self.img_transform(img)
+        # if self.img_transform is not None:
+        #     img = self.img_transform(img)
+
+        # 把image转换成tensor
+        transform_to_tensor = transforms.ToTensor()
+        img = transform_to_tensor(img)
 
         if self.use_aux:
             return img, cls_label, seg_label
@@ -242,33 +252,43 @@ class AutocoreLaneClsDataset(torch.utils.data.Dataset):
         return len(self.list)
 
     def _grid_pts(self, pts, num_cols, w):
-        # pts : numlane,n,2
+        """return ndarray 9 x 4,值为每个参考行的每条车道线所在的grid"""
+        # pts : numlane,n,2  # 4 9 2
         num_lane, n, n2 = pts.shape
         col_sample = np.linspace(0, w - 1, num_cols)
 
         assert n2 == 2
-        to_pts = np.zeros((n, num_lane))
+        to_pts = np.zeros((n, num_lane))  # 9 x 4
         for i in range(num_lane):
             pti = pts[i, :, 1]
             to_pts[:, i] = np.asarray(
                 [int(pt // (col_sample[1] - col_sample[0])) if pt != -1 else num_cols for pt in pti])
         return to_pts.astype(int)
 
+
     def _get_index(self, label):
+        """ 获取label图像中车道线点的坐标.  return ndarray shape=[num_lanes,num_row_anchor,2].2中存两个值,一个行,一个列"""
         w, h = label.size
-        # print('label size={}'.format(label.size))
+        print('label size={}'.format(label.size))
 
         #第三个维度存的数据的含义1:原图中的参考行的行数r 2.第r行对应的第x条车道线像素的列的均值
         #举个具体例子,有10个参考行,其中第5个参考行为原图中的第50行,有两条车道线,lane1的像素在本行的列数为30,31,32,lane2的像素在本行的列数为70,71,72的话,
         #则all_idx[0,5,:]=50,31   all_idx[1,5,:]=50,71
         all_idx = np.zeros((self.num_lanes,len(self.row_anchor),2))  # 
         # print('all_idx shape={}'.format(all_idx.shape))
-   
-        for i,r in enumerate(self.row_anchor):  #遍历每一个参考行  
-            # print('i={},r={}'.format(i,r))
-            img = np.asarray(label) # 1080 * 1440
 
-            img_r = img[r]  # 第r行的img 1440
+        #由于对图像做了resize处理.相应的参考行会改变.autocore_row_anchor是按照原图配置的.
+        sample_tmp = []
+        if h != 1080:
+            scale_f = lambda x : int((x * 1.0/1080) * h)
+            sample_tmp = list(map(scale_f,self.row_anchor))
+        print('sample_tmp={}'.format(sample_tmp))
+
+        for i,r in enumerate(sample_tmp):  #遍历每一个参考行  
+            # print('i={},r={}'.format(i,r))
+            img = np.asarray(label) 
+
+            img_r = img[r]  
 
             for lane_idx in range(1, self.num_lanes + 1):
                 pixel = 30 * lane_idx  #数据集制作时当前lane的像素点的亮度值. 参考脚本convert_autocore.py
