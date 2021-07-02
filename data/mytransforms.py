@@ -202,3 +202,20 @@ class RandomColorContrast(object):
         img = np.array(contrast_img)
         label = np.array(label)
         return Image.fromarray(img),Image.fromarray(label)
+
+
+class Resize(object):
+    """
+    对原图与label图做尺寸变换. 类型:PIL.image
+    """
+
+    def __init__(self,dim):
+        """dim = (width, height)"""
+        self.dim = dim
+    def __call__(self,img,label):
+        resized_img = img.resize(self.dim) 
+
+        resized_label = label.resize(self.dim) 
+        return resized_img,resized_label
+
+
