@@ -112,7 +112,7 @@ class LaneClsDataset(torch.utils.data.Dataset):
 
     def _get_index(self, label):
         w, h = label.size
-        print('label size={}'.format(label.size))
+        # print('label size={}'.format(label.size))
 
         #这里为何要这么做? self.row_anchor不是已经区分culane还是tusimple了吗 800*288是culane的数据集的图片大小 1280*720是tusimple数据集大小
         #答:因为constant.py中定义的tusimple_row_anchor是以h为288作为参考来定义的.
@@ -204,7 +204,7 @@ class AutocoreLaneClsDataset(torch.utils.data.Dataset):
         l = self.list[index]
         l_info = l.split()
         img_name, label_name = l_info[0], l_info[1]
-        # print('img_name={},label_name={}'.format(img_name,label_name))
+        print('img_name={},label_name={}'.format(img_name,label_name))
         if img_name[0] == '/':
             img_name = img_name[1:]
             label_name = label_name[1:]
@@ -212,23 +212,26 @@ class AutocoreLaneClsDataset(torch.utils.data.Dataset):
         # 加载gt图
         label_path = os.path.join(self.path, label_name)
         label = loader_func(label_path)
-
+        print('label mode={}'.format(label.mode)) #label mode=L
         # 加载原图
         img_path = os.path.join(self.path, img_name)
         img = loader_func(img_path)
+        print('img mode={}'.format(img.mode)) #img mode=RGB
 
         # 做transform. 注意:只有涉及到shape的变换可以同时对img,label使用,比如resize,rotate等!  涉及到像素值的变换不可以对label使用!
+        # resize也会改变像素值! 原图的pixel只有30,60,120.  resize后产生了90.
         if self.transform is not None:
             # print('self.transform={}'.format(self.transform))
-            img,label = self.transform(img,label)
+            # img,label = self.transform(img,label)
+            img = self.transform(img)
 
-        # 在变换后的图上寻找lane_pts
+        # 在原图上寻找lane_pts.  在图像等比例缩放的情况下,每行的车道线所处的grid不变.即cls_label不变.
         lane_pts = self._get_index(label)  
-        print('lane_pts={}'.format(lane_pts.shape))
+        # print('lane_pts={}'.format(lane_pts.shape))
         # get the coordinates of lanes at row anchors
         w, h = img.size
         cls_label = self._grid_pts(lane_pts, self.griding_num, w)
-        # print('cls_label={}'.format(cls_label))
+        print('cls_label={}'.format(cls_label))
 
         # make the coordinates to classification label
         if self.use_aux:
@@ -269,7 +272,8 @@ class AutocoreLaneClsDataset(torch.utils.data.Dataset):
     def _get_index(self, label):
         """ 获取label图像中车道线点的坐标.  return ndarray shape=[num_lanes,num_row_anchor,2].2中存两个值,一个行,一个列"""
         w, h = label.size
-        print('label size={}'.format(label.size))
+        print('label mode={}'.format(label.mode)) #label mode=L
+        # print('label size={}'.format(label.size))
 
         #第三个维度存的数据的含义1:原图中的参考行的行数r 2.第r行对应的第x条车道线像素的列的均值
         #举个具体例子,有10个参考行,其中第5个参考行为原图中的第50行,有两条车道线,lane1的像素在本行的列数为30,31,32,lane2的像素在本行的列数为70,71,72的话,
@@ -282,18 +286,22 @@ class AutocoreLaneClsDataset(torch.utils.data.Dataset):
         if h != 1080:
             scale_f = lambda x : int((x * 1.0/1080) * h)
             sample_tmp = list(map(scale_f,self.row_anchor))
-        print('sample_tmp={}'.format(sample_tmp))
+        # print('sample_tmp={}'.format(sample_tmp))
 
         for i,r in enumerate(sample_tmp):  #遍历每一个参考行  
             # print('i={},r={}'.format(i,r))
             img = np.asarray(label) 
+            print('label[309][568]={}'.format(img[309][568]))  #=90????
+
+            cv2.imwrite('./frame0214_label.png',img)
 
             img_r = img[r]  
 
             for lane_idx in range(1, self.num_lanes + 1):
                 pixel = 30 * lane_idx  #数据集制作时当前lane的像素点的亮度值. 参考脚本convert_autocore.py
                 pos = np.where(img_r == pixel)[0] # 第lane_idx条车道线的列数 
-                # print('lane{} in row{} cols={}'.format(lane_idx,r,pos))
+                if lane_idx == 3:
+                    print('lane{} in row{} cols={}'.format(lane_idx,r,pos))
                 # print('pos shape={}'.format(pos.shape))
                 if len(pos) == 0: #说明第r行没有车道线lane_idx
                     # print('no lane{} point in row{}'.format(lane_idx,r))

@@ -33,7 +33,7 @@ def draw(im,line_points,idx,show = True):
         print('pos={}'.format(pos))
 
         # 这里要注意,putText会使得非车道线像素点的像素值不为0.
-        cv2.putText(im,str(idx),(int(pos[0]),int(pos[1])-20),cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255), lineType=cv2.LINE_AA)
+        # cv2.putText(im,str(idx),(int(pos[0]),int(pos[1])-20),cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255), lineType=cv2.LINE_AA)
         idx = idx * 30 #下面cv2.line使用,像素亮度调到30倍
     
     pt_pre = ( int(line_points[0][0]),int(line_points[0][1]) )

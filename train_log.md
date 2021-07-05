@@ -215,5 +215,21 @@ epoch=150时,loss=0.13左右跳变.
 # 20210701
 溧水日间数据. 标注总计144张.
 
+# 20210702
+backbone采用resnet34,效果不好.
 
+## test1
+backbone换成resnet101.不做数据增强. batch=2.
+epoch70 loss=loss=0.088
 
+## test2
+``` python
+        img_transform = transforms.Compose([
+            transforms.Resize((1080/2, 1440/2)), #原图下采样
+            transforms.ToTensor(),
+            # transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+        ])
+```
+
+# 20210705
+对frame0214.jpg单独调试. 发现代码读取到的label groud truth某些参考行的车道线点不正确.
