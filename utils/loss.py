@@ -44,44 +44,44 @@ class SoftmaxFocalLoss(nn.Module):
         
         ###################################################################
 
-        #debug code 
-        # print('scores={}'.format(scores.shape)) #lane1 [1,101,9,4]
-        # print('labels={}'.format(labels) )#lane1 [1,9,4]
-        # lane1_pre= scores[0,:,:,0].cpu() #[101,9]
-        # print('lane1_pre shape={}'.format(lane1_pre.shape))
-        # lane1_loc = labels[0,:,0] 
-        # print(lane1_loc)
-        lane_idx = 3
-        lane_right_loc = labels[0,:,lane_idx]
-        grid = 100  #see configs/autocore.py
-        pixel_every_grid = 1440/100
-        print('lane_right_loc={}'.format(pixel_every_grid * lane_right_loc))
+        # #debug code 
+        # # print('scores={}'.format(scores.shape)) #lane1 [1,101,9,4]
+        # # print('labels={}'.format(labels) )#lane1 [1,9,4]
+        # # lane1_pre= scores[0,:,:,0].cpu() #[101,9]
+        # # print('lane1_pre shape={}'.format(lane1_pre.shape))
+        # # lane1_loc = labels[0,:,0] 
+        # # print(lane1_loc)
+        # lane_idx = 3
+        # lane_right_loc = labels[0,:,lane_idx]
+        # grid = 100  #see configs/autocore.py
+        # pixel_every_grid = 1440/100
+        # print('lane_right_loc={}'.format(pixel_every_grid * lane_right_loc))
         
-        scores = scores.cpu()
-        labels = labels.cpu() #cpu上的错误提示更友好一些
-        lane_num = labels.shape[2]
-        anchor_row_num = labels.shape[1]
+        # scores = scores.cpu()
+        # labels = labels.cpu() #cpu上的错误提示更友好一些
+        # lane_num = labels.shape[2]
+        # anchor_row_num = labels.shape[1]
 
-        grid = 100
+        # grid = 100
         
-        for i in range(anchor_row_num):
-            for j in range(0,lane_num):
-                if j == 0:  #debug lane_left
-                    truth_grid = labels[0,i,j] #acnhor_row_i truth grid
-                    # true_grid_preprob = lane1_pre.index_select(0,lane1_loc.cpu()) #在维度1上选择特定下标
-                    pre_prob = scores[0,truth_grid,i,j]
+        # for i in range(anchor_row_num):
+        #     for j in range(0,lane_num):
+        #         if j == 0:  #debug lane_left
+        #             truth_grid = labels[0,i,j] #acnhor_row_i truth grid
+        #             # true_grid_preprob = lane1_pre.index_select(0,lane1_loc.cpu()) #在维度1上选择特定下标
+        #             pre_prob = scores[0,truth_grid,i,j]
 
-                    anchor_r = constant.autocore_row_anchor[i]
-                    pixel_loc = truth_grid * 1440/grid
-                    print('lane_left,row={},truth_grid={},pixel_loc={},prob={}'.format(anchor_r,truth_grid,pixel_loc,pre_prob))
-                if j == lane_num - 1: #debug lane_right
-                    truth_grid = labels[0,i,j] #acnhor_row_i truth grid
-                    # true_grid_preprob = lane1_pre.index_select(0,lane1_loc.cpu()) #在维度1上选择特定下标
-                    pre_prob = scores[0,truth_grid,i,j]
+        #             anchor_r = constant.autocore_row_anchor[i]
+        #             pixel_loc = truth_grid * 1440/grid
+        #             print('lane_left,row={},truth_grid={},pixel_loc={},prob={}'.format(anchor_r,truth_grid,pixel_loc,pre_prob))
+        #         if j == lane_num - 1: #debug lane_right
+        #             truth_grid = labels[0,i,j] #acnhor_row_i truth grid
+        #             # true_grid_preprob = lane1_pre.index_select(0,lane1_loc.cpu()) #在维度1上选择特定下标
+        #             pre_prob = scores[0,truth_grid,i,j]
 
-                    anchor_r = constant.autocore_row_anchor[i]
-                    pixel_loc = truth_grid * 1440/grid
-                    print('lane_right,row={},truth_grid={},pixel_loc={},prob={}'.format(anchor_r,truth_grid,pixel_loc,pre_prob))
+        #             anchor_r = constant.autocore_row_anchor[i]
+        #             pixel_loc = truth_grid * 1440/grid
+        #             print('lane_right,row={},truth_grid={},pixel_loc={},prob={}'.format(anchor_r,truth_grid,pixel_loc,pre_prob))
 
         ###################################################################
 

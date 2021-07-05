@@ -45,6 +45,7 @@ def get_train_loader(batch_size, data_root, griding_num, dataset, use_aux, distr
                                            segment_transform=segment_transform,use_aux=use_aux, num_lanes = num_lanes)
         cls_num_per_lane = 56
     elif dataset == 'Autocore':
+        # !!!!要注意小心区分 哪些transform会导致真值的变换 哪些不会
         # torch中的transforms大部分是接受PIL.Image和tensor images.少部分只接受PIL.Image
         transform = transforms.Compose([
             transforms.Resize((int(1080/2), int(1440/2))), #原图下采样
