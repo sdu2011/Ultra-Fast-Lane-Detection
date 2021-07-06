@@ -13,6 +13,8 @@ import numpy as np
 import cv2
 import argparse
 
+import time
+
 def load_model(cfg):
     print(autocore_row_anchor)
     cls_num_per_lane=len(autocore_row_anchor)
@@ -26,7 +28,7 @@ def load_model(cfg):
     state_dict = torch.load(test_model, map_location='cpu')['model']
     compatible_state_dict = {}
     for k, v in state_dict.items():
-        # print(k)
+        print(k)
         if 'module.' in k:
             compatible_state_dict[k[7:]] = v
         else:
@@ -51,7 +53,7 @@ def img_resize(img,width,height):
         #新的图片的h = height
         r = height / float(origin_h)
         dim = (int(origin_w * r), height)
-        print('dim={}'.format(dim))
+        # print('dim={}'.format(dim))
         resized = cv2.resize(img, dim)
         print(resized.shape)
         w_diff = int(width - int(origin_w * r))/2
@@ -62,7 +64,7 @@ def img_resize(img,width,height):
         # 新的图片的w = width
         r = width / float(origin_w)
         dim = (width, int(origin_h * r))
-        print('dim={}'.format(dim))
+        # print('dim={}'.format(dim))
         resized = cv2.resize(img, dim)
 
         h_diff = int(height - int(origin_h * r))/2
@@ -71,8 +73,11 @@ def img_resize(img,width,height):
 
     return empty_img
 
+low_prob_imgs=[]
 def lane_detect(imPath,net,export_onnx=False,onnx_model_name='./lane.onnx',downsample_dim=(1440,1080)):
-    print('detect {} begin'.format(imPath))
+    global low_prob_imgs
+
+    # print('detect {} begin'.format(imPath))
     new_w,new_h =  downsample_dim[0],downsample_dim[1]
 
     img = cv2.imread(imPath)
@@ -115,7 +120,7 @@ def lane_detect(imPath,net,export_onnx=False,onnx_model_name='./lane.onnx',downs
     # print('out_j[:,{},{}]={}'.format(debug_row,debug_lane,out_j[:,debug_row,debug_lane]))
 
     prob = scipy.special.softmax(out_j[:-1, :, :], axis=0) #grid这个维度只对前grid个值求概率 最后一个值用来表示是否存在车道线的点
-    print('prob shape={}'.format(prob.shape))
+    # print('prob shape={}'.format(prob.shape))
     
     debug_row,debug_lane = 0,0
     # print('prob[:,{},{}]={}'.format(debug_row,debug_lane,prob[truth_grid,debug_row,debug_lane]))
@@ -150,31 +155,40 @@ def lane_detect(imPath,net,export_onnx=False,onnx_model_name='./lane.onnx',downs
     # print('line{},out_j shape={}'.format(get_linenumber(),out_j.shape))
     loc[out_j == cfg.griding_num] = 0 #如果概率最大的下标为gridding_num的话说明是grid+1中的那个1. 则把loc相应位置的值置为0.表示在这个位置无车道线点.?
     out_j = loc
-    print('out_j shape={}'.format(out_j.shape))
-    # print('out_j={}'.format(out_j))
-
+    # print('out_j shape={}'.format(out_j.shape))
+    # print('out_j={}'.format(out_j))grid 
     col_sample = np.linspace(0, 1440 - 1, cfg.griding_num) 
-    # print('cfg.griding_num={}'.format(cfg.griding_num))
     col_sample_w = col_sample[1] - col_sample[0] # 每个grid的像素数目
 
     #out_j.shape=(18,4)
     vis = cv2.imread(imPath)
+
+    low_prob = False
     for i in range(out_j.shape[1]):  #遍历每条车道线 4
+        #每条车道线有一个flag
         if np.sum(out_j[:, i] != 0) > 2: #对车道线i来说,要至少两个点才处理
             for k in range(out_j.shape[0]): #遍历每个参考行 9
                 grid = out_j[k, i]
-                if grid != 100:  #k代表行 i代表grid
+                if grid > 0: #k代表行 i代表grid  =0表示无车道线
                     #图中的车道点位置
                     max_prob = prob[grid,k,i]
-                    if max_prob > 0.8:
+                    if max_prob > 0.:
+                        # print('max peob={}'.format(max_prob))
                         point_w =  int(out_j[k, i] * col_sample_w) - 1
                         point_h = int(autocore_row_anchor[k]) - 1
                         ppp = (point_w,  point_h)
                         # print(out_j[k, i])
 
                         #不同的线用不同颜色点标识
-                        colors = [(0,0,255),(255,0,0),(255,255,255),(0,255,0)] 
+                        colors = [(0,0,255),(255,0,0),(255,255,255),(0,255,0)]
                         cv2.circle(vis,ppp,5,colors[i],-1)
+                    if max_prob < 0.5:
+                        low_prob = True
+                        # print('max peob={}'.format(max_prob))
+                        # print('near grid prob={}'.format(prob[:,k,i]))
+    if low_prob:
+        print('low prob,img={}'.format(imPath))
+        low_prob_imgs.append(imPath)
     
     # cv2.imshow('lane',vis)
     # cv2.waitKey(0)
@@ -191,6 +205,7 @@ if __name__ == "__main__":
     args, cfg = merge_config()
 
     # cfg = autocore_cfg
+ 
     net = load_model(cfg)
 
     test_imgs = []
@@ -213,15 +228,23 @@ if __name__ == "__main__":
     
     fourcc = cv2.VideoWriter_fourcc(*'MJPG')
     vout = cv2.VideoWriter('lane_detect.avi', fourcc , 10.0, (1440, 1080))
+    begin = time.time()
     for i,img in enumerate(test_imgs):
         # imPath= '/home/train/hdd/sc/data/lane/autocore/frame0450.jpg'   
         # onnx_model_name = cfg.test_model[-9:-4] + '.onnx' 
-        print(i,':',img)
+        # print(i,':',img)
         vis = lane_detect(img,net,export_onnx=False,downsample_dim=(720,540))
         vout.write(vis)
+
+        if i % 100 == 0:
+            end = time.time()
+            print('{}image,duration={}'.format(i+1,end-begin))
+            print('average={}'.format((end-begin)/(i+1)))
     vout.release()
     
-
+    # global low_prob_imgs
+    print('low prob,low_prob_imgs={}'.format(low_prob_imgs))
+    print(' len(low_prob_imgs)={}'.format(len(low_prob_imgs) ))
     # print(autocore_row_anchor)
     # cls_num_per_lane=len(autocore_row_anchor)
         

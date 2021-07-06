@@ -89,8 +89,11 @@ def train(net, data_loader, loss_dict, optimizer, scheduler,logger, epoch, metri
         t_data_0 = time.time()
         
 
+
 if __name__ == "__main__":
     torch.backends.cudnn.benchmark = True
+
+    torch.cuda.empty_cache()
 
     args, cfg = merge_config()
 

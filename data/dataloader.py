@@ -52,7 +52,7 @@ def get_train_loader(batch_size, data_root, griding_num, dataset, use_aux, distr
             transforms.Resize((int(1080/2), int(1440/2))), #原图下采样 下采样以减少全连接层参数数量.
             # transforms.ToTensor(),
             # transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-            # mytransforms.RandomColorBright(2),
+            mytransforms.RandomColorBright(2),
             # mytransforms.RandomColorContrast(3)
         ])
 

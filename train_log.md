@@ -233,3 +233,47 @@ epoch70 loss=loss=0.088
 
 # 20210705
 对frame0214.jpg单独调试. 发现代码读取到的label groud truth某些参考行的车道线点不正确.
+
+# 20210706
+在做数据增强时,resize插值算法会改变label img的像素值.在做数据增强时,要小心,哪些transform会改变label img的值,从而影响groud truth的获取.
+
+标注数据总计216张.
+
+finetune=50th epoch, loss经过150epoch在0.1附近震荡.
+
+在训练集上做检测,肉眼看,效果很好,把max_prob打印出来,却有很多max_prob不到0.5. 把对应预测的概率打印出来,发现很多grid的概率是1%这样.但是grid过多,加起来也不小.
+比较理想的状态时正确grid的prob=0.99,错误grid的prob=0.
+在label img上查看,车道线宽度大约20-30个像素. 宽度1440,对应grid为50-70.
+
+调整grid数目和focal loss的gamma.
+``` python
+gamma  = 0.5
+griding_num = 60
+```
+loss稳定在0.05.
+len(low_prob_imgs)=158 
+
+``` python
+gamma  = 2
+griding_num = 60
+```
+
+``` python
+class SoftmaxFocalLoss(nn.Module):
+    def __init__(self, gamma, ignore_lb=255, *args, **kwargs):
+        super(SoftmaxFocalLoss, self).__init__()
+        self.gamma = gamma
+        self.nll = nn.NLLLoss(ignore_index=ignore_lb)
+
+    def forward(self, logits, labels):
+        scores = F.softmax(logits, dim=1) #转成概率
+        # print('scores={}'.format(scores[0,]))
+        factor = torch.pow(1.0-scores, self.gamma)#求每个概率的权重w=(1-p)的gamma次方
+        log_score = F.log_softmax(logits, dim=1)#求log(p)
+        log_score = factor * log_score#每个元素都变成w*log(p)
+        loss = self.nll(log_score, labels)#取labels标识的log_score求平均
+```
+loss稳定在0.05. len(low_prob_imgs)=164
+我们总会选择正确的grid对应的w*(-log(p)),-log(p)下降的速率和(1-p)^gamma p越大,-lg(p)越小. p越大,(1-p)^gamma越小.
+
+
