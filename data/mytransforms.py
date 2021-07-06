@@ -171,38 +171,24 @@ from PIL import Image, ImageEnhance
 class RandomColorBright(object):
     def __init__(self,alpha):
         self.alpha = alpha
-    def __call__(self,img,label):
+    def __call__(self,img):
         bright_enhancer = ImageEnhance.Brightness(img)
         alpha = 1 + 0.1 * np.random.randint(-self.alpha,self.alpha) #随机调整亮度
         bright_img      = bright_enhancer.enhance(self.alpha)
         img = np.array(bright_img)
-        label = np.array(label)
-        return Image.fromarray(img),Image.fromarray(label)
+        
+        return Image.fromarray(img)
 
 class RandomColorContrast(object):
     def __init__(self,alpha):
         self.alpha = alpha
-    def __call__(self,img,label):
+    def __call__(self,img):
         enhancer =  ImageEnhance.Contrast(img)
         alpha = 1 + 0.1 * np.random.randint(-self.alpha,self.alpha) #随机调整对比度
         contrast_img      = enhancer.enhance(self.alpha)
         img = np.array(contrast_img)
-        label = np.array(label)
-        return Image.fromarray(img),Image.fromarray(label)
-
-
-
-class RandomColorContrast(object):
-    def __init__(self,alpha):
-        self.alpha = alpha
-    def __call__(self,img,label):
-        enhancer =  ImageEnhance.Contrast(img)
-        alpha = 1 + 0.1 * np.random.randint(-self.alpha,self.alpha) #随机调整对比度
-        contrast_img      = enhancer.enhance(self.alpha)
-        img = np.array(contrast_img)
-        label = np.array(label)
-        return Image.fromarray(img),Image.fromarray(label)
-
+        
+        return Image.fromarray(img)
 
 
 # class Resize(object):

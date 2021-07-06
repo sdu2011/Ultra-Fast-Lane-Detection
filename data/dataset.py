@@ -180,10 +180,11 @@ class LaneClsDataset(torch.utils.data.Dataset):
 
 
 class AutocoreLaneClsDataset(torch.utils.data.Dataset):
-    def __init__(self, path, list_path, transform = None,griding_num=50, load_name = False,
+    def __init__(self, path, list_path, transform = None,transform2=None,griding_num=50, load_name = False,
                 row_anchor = None,use_aux=False,segment_transform=None, num_lanes = 4):
         super(AutocoreLaneClsDataset, self).__init__()
         self.transform = transform
+        self.transform2 = transform2
         # self.target_transform = target_transform
         self.segment_transform = segment_transform
         # self.simu_transform = simu_transform
@@ -218,16 +219,12 @@ class AutocoreLaneClsDataset(torch.utils.data.Dataset):
         img = loader_func(img_path)
         # print('img mode={}'.format(img.mode)) #img mode=RGB
 
-        # 做transform. 注意:只有涉及到shape的变换可以同时对img,label使用,比如rotate  涉及到像素值的变换不可以对label使用!
-        # resize也会改变像素值! 原图的pixel只有30,60,120.  resize后产生了90.
-        if self.transform is not None:
-            # print('self.transform={}'.format(self.transform))
-            # img,label = self.transform(img,label)
-            img = self.transform(img)
-
         
+        """做transform. 注意:只有涉及到shape的变换可以同时对img,label使用,比如rotate  涉及到像素值的变换不可以对label使用!"""
+        if self.transform2 is not None:
+            img, label = self.transform2(img, label)  #PIL.Image
 
-        # 在原图上寻找lane_pts.  在图像等比例缩放的情况下,每行的车道线所处的grid不变.即cls_label不变.
+        # 在变化后(不影响像素值)的label img上寻找lane_pts.  在图像等比例缩放的情况下,每行的车道线所处的grid不变.即cls_label不变.
         lane_pts = self._get_index(label)  
         # print('lane_pts={}'.format(lane_pts))
         # get the coordinates of lanes at row anchors
@@ -236,13 +233,16 @@ class AutocoreLaneClsDataset(torch.utils.data.Dataset):
         cls_label = self._grid_pts(lane_pts, self.griding_num, w)
         # print('cls_label={}'.format(cls_label))
 
+        """注意顺序,transform要在获取label的ground truth以后.因为compose2里会要求label.size==img.size."""
+        # resize也会改变像素值! 原图的pixel只有30,60,120.  resize后产生了90.
+        if self.transform is not None:
+            # print('self.transform={}'.format(self.transform))
+            img = self.transform(img)
+
         # make the coordinates to classification label
         if self.use_aux:
             assert self.segment_transform is not None
             seg_label = self.segment_transform(label)
-
-        # if self.img_transform is not None:
-        #     img = self.img_transform(img)
 
         # 把image转换成tensor
         transform_to_tensor = transforms.ToTensor()

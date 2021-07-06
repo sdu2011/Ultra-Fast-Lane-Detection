@@ -44,6 +44,7 @@ class SoftmaxFocalLoss(nn.Module):
         
         ###################################################################
 
+
         # #debug code 
         # # print('scores={}'.format(scores.shape)) #lane1 [1,101,9,4]
         # # print('labels={}'.format(labels) )#lane1 [1,9,4]
@@ -57,10 +58,27 @@ class SoftmaxFocalLoss(nn.Module):
         # pixel_every_grid = 1440/100
         # print('lane_right_loc={}'.format(pixel_every_grid * lane_right_loc))
         
-        # scores = scores.cpu()
-        # labels = labels.cpu() #cpu上的错误提示更友好一些
-        # lane_num = labels.shape[2]
-        # anchor_row_num = labels.shape[1]
+        scores = scores.cpu()
+        labels = labels.cpu() #cpu上的错误提示更友好一些
+        lane_num = labels.shape[2]
+        anchor_row_num = labels.shape[1]
+
+        # watch max prob
+        lane_l_pre_prob,lane_r_pre_prob=0.,0.
+        for i in range(anchor_row_num):
+            for j in range(0,lane_num):
+                if j == 0:  #debug lane_left
+                    truth_grid = labels[0,i,j] #acnhor_row_i truth grid
+                    # true_grid_preprob = lane1_pre.index_select(0,lane1_loc.cpu()) #在维度1上选择特定下标
+                    lane_l_pre_prob = scores[0,truth_grid,i,j]
+                    if lane_l_pre_prob < 0.5:
+                        print('lane_l_pre_prob={}'.format(lane_l_pre_prob))
+                if j == lane_num - 1: #debug lane_right
+                    truth_grid = labels[0,i,j] #acnhor_row_i truth grid
+                    # true_grid_preprob = lane1_pre.index_select(0,lane1_loc.cpu()) #在维度1上选择特定下标
+                    lane_r_pre_prob = scores[0,truth_grid,i,j]
+                    if lane_r_pre_prob < 0.5:
+                        print('lane_r_pre_prob={}'.format(lane_r_pre_prob))
 
         # grid = 100
         
